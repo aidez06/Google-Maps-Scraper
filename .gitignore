@@ -1,0 +1,44 @@
+# Ignore cache files
+*.cache
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Ignore compiled files
+*.pyc
+*.pyo
+__pycache__/
+
+# Ignore database files
+*.db
+*.sqlite
+
+# Ignore package dependencies
+node_modules/
+bower_components/
+
+# Ignore editor-specific files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore environment files
+.env
+
+# Ignore log files
+log/
+
+# Ignore compiled output
+dist/
+build/
+out/
+
+# Ignore generated documentation
+docs/
+doc/
