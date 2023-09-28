@@ -15,7 +15,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 
 class Locator:
 
-    def __init__(self, keyword, ) -> None:
+    def __init__(self, keyword) -> None:
         self.keyword = keyword
         self.url = f"https://www.google.com/maps/search/{self.keyword}"
 
@@ -30,6 +30,7 @@ class Locator:
             return keywords
 
     def locator_start(self):
+        information = []
         self.driver.get(self.url)
         search_box = WebDriverWait(self.driver,1000).until(
             EC.presence_of_element_located((By.XPATH,'//input[@id="searchboxinput"]'))
@@ -54,7 +55,6 @@ class Locator:
                 # Create an ActionChains object to perform the hover action and scroll
                 try:
                     hover_element = self.driver.find_element(By.CSS_SELECTOR,"a.hfpxzc")
-                    print(hover_element)
                     actions = ActionChains(self.driver)
                     actions.move_to_element(hover_element).perform()
                 except:
@@ -77,6 +77,9 @@ class Locator:
                     if number_scroll >= 10:
                         self.driver.refresh()
 
+                
+
+
 
         
                 webDirection_removal = """
@@ -92,94 +95,56 @@ class Locator:
                         element.remove();
                     });
                 """
-
-                keyword_result_data = """
-                async function processWineryLinks() {
-                    const wineryLinks = document.querySelectorAll('a.hfpxzc');
-                    const delay = 1000; // 1 second
-                    var result = [];
-                    for (let index = 0; index < wineryLinks.length; index++) {
-                        const link = wineryLinks[index];
-                        // Simulate a click on the link
-                        link.click();
-                        // Wait for the delay using a Promise
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        // Check if the parent element contains the desired text
-                        const parentElement = link.parentElement;
-                        if (parentElement && (%s)) {
-                            var innerResult = [];
-                            // Extract data using query selectors
-                            innerResult.push(link.getAttribute('aria-label'));
-                            const anchorElement = document.querySelector('a[data-tooltip="Open website"]');
-                            const buttonElement = document.querySelector('button[data-tooltip="Copy phone number"]');
-                            const address = document.querySelector('button[data-tooltip="Copy address"]');
-                            innerResult.push(buttonElement ? buttonElement.getAttribute('data-item-id') : "");
-                            innerResult.push(address ? address.getAttribute('aria-label') : "");
-                            innerResult.push(anchorElement ? anchorElement.getAttribute('href') : "");
-                            result.push(innerResult);
-                        }
-                    }
-                    // Logging the result array
-                    console.log(result);
-                    // Add the result array to the HTML document for debugging
-                    var resultElement = document.createElement('pre');
-                    resultElement.textContent = JSON.stringify(result, null, 2);
-                    document.body.appendChild(resultElement);
-                }
-                processWineryLinks();
-                
-                """
-
-                keyword_checks = " || ".join([f'parentElement.textContent.includes("{keyword.strip()}")' for keyword in self.keywords()])
-
-                full_keyword_result_data = keyword_result_data % keyword_checks
-
-
-
-
                 self.driver.execute_script(webDirection_removal)
                 self.driver.execute_script(ads_removal)
-                self.driver.execute_script(full_keyword_result_data)
+                
+                print("entering")
+                for google_map in self.driver.find_elements(By.CSS_SELECTOR, 'a.hfpxzc'):
+                    self.driver.execute_script(f"window.open('{google_map.get_attribute('href')}', '_blank');")
+                    # Switch to the new tab (the last tab in the list)
+                    window_handles = self.driver.window_handles
+                    new_tab_handle = window_handles[-1]
+                    self.driver.switch_to.window(new_tab_handle)
+                    WebDriverWait(self.driver, 20).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR,'h1.lfPIob'))
+                    )
+                    try:
+                        # Use a JavaScript snippet to extract data from the page
+                        getInfo = """
+                            const companyName = document.querySelector('h1.lfPIob') ? document.querySelector('h1.lfPIob').textContent : '';
+                            const addressButton = document.querySelector('button[data-item-id="address"]');
+                            const address = addressButton ? addressButton.getAttribute('aria-label') : '';
+                            const websiteLink = document.querySelector('a[data-item-id="authority"]');
+                            const websiteUrl = websiteLink ? websiteLink.getAttribute('href') : '';
+                            const phoneButton = document.querySelector('button[data-item-id^="phone:"]');
+                            const phoneNumber = phoneButton ? phoneButton.getAttribute('aria-label') : '';
+                            return [companyName, address,phoneNumber, websiteUrl];
+                        """
+                        
+                        data = self.driver.execute_script(getInfo)
+                        information.append(data)
+                    except Exception as e:
+                        # Handle exceptions if the extraction fails for any reason
+                        print(f"Error: {e}")
+                    
+                    self.driver.close()
+                    mainWindow = self.driver.window_handles[0]
+                    self.driver.switch_to.window(mainWindow)
 
 
-                #Waiting until pre tag element already exist
+             
 
-                results = WebDriverWait(self.driver,1000).until(
-                    EC.presence_of_element_located((By.TAG_NAME,'pre'))
-                )
-                time.sleep(5)
+                # keyword_checks = " || ".join([f'parentElement.textContent.includes("{keyword.strip()}")' for keyword in self.keywords()])
 
-                data_list = json.loads(results.text)
+                # full_keyword_result_data = keyword_result_data % keyword_checks
 
-                return data_list
+
+
+
+                
             except Exception as e:
-                try:
-                    company_name = self.driver.find_element(By.XPATH, "//h1[@class='DUwDvf lfPIob']").text
-                    website_result = None  # Initialize website_result
-                    address = None  # Initialize address
-                    phone_number = None  # Initialize phone_number
-
-                    try:
-                        website = self.driver.find_element(By.XPATH, '//a[@data-tooltip="Open website"]')
-                        website_result = website.get_attribute('href')
-                    except:
-                        pass
-
-                    try:
-                        address_element = self.driver.find_element(By.XPATH,'//button[@data-tooltip="Copy address"]')
-                        address = address_element.get_attribute("aria-label")
-                    except:
-                        pass
-
-                    try:
-                        phone_element = self.driver.find_element(By.XPATH, '//button[@data-tooltip="Copy phone number"]')
-                        phone_number = phone_element.get_attribute("aria-label")
-                    except:
-                        pass
-                except:
-                    company_name = None
+                pass
+        return information
 
 
-                return [[company_name, phone_number, website_result, address]]
-            
 
